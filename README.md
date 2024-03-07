@@ -1,5 +1,7 @@
 # An access control panel template
 
+==Anything that can be build in JavaScript will be build in Javascript==
+
 
 
 * back-end nodejs

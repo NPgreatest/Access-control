@@ -37,8 +37,6 @@ app.get('/admin_api/info', verifyToken, async (req, res) => {
 });
 
 
-
-
 app.post('/admin_api/change-password', async (req, res) => {
     const { userId, newPassword } = req.body;
     const newPasswordHash = await bcrypt.hash(newPassword, 10);
@@ -55,6 +53,28 @@ app.post('/admin_api/permissions/update', async (req, res) => {
     const { userId, teamIds, accessLevel } = req.body;
     await Permission.findOneAndUpdate({ userId }, { teamIds, accessLevel }, { upsert: true });
     res.send({ message: 'Permissions updated successfully',code:200 });
+});
+
+
+app.get('/verify', async (req, res) => {
+    const { userId, teamId, operation } = req.query;
+    try {
+
+        const permission = await Permission.findOne({ userId: userId });
+        if (!permission) {
+            return res.status(403).json({ message: "No permissions found for user" });
+        }
+
+        const hasAccess = permission.teamIds.includes(teamId) && (permission.accessLevel === operation || permission.accessLevel === "write");
+        if (hasAccess) {
+            res.status(200).json({ message: "Access granted" });
+        } else {
+            res.status(403).json({ message: "Access denied" });
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Internal server error" });
+    }
 });
 
 const authenticateToken = (req, res, next) => {

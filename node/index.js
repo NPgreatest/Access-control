@@ -49,11 +49,25 @@ app.get('/admin_api/permissions', verifyToken, async (req, res) => {
     res.send(permissions);
 });
 
-app.post('/admin_api/permissions/update', async (req, res) => {
-    const { userId, teamIds, accessLevel } = req.body;
+app.post('/admin_api/permissions/update',  verifyToken, async (req, res) => {
+    const {  userId,teamIds, accessLevel } = req.body;
     await Permission.findOneAndUpdate({ userId }, { teamIds, accessLevel }, { upsert: true });
     res.send({ message: 'Permissions updated successfully',code:200 });
 });
+
+app.post('/admin_api/permissions/delete', verifyToken, async (req, res) => {
+    const { userId } = req.body;
+    try {
+        const result = await Permission.deleteOne({ userId });
+        if (result.deletedCount === 0) {
+            return res.status(404).send({ message: 'Permission not found', code: 404 });
+        }
+        res.send({ message: 'Permission deleted successfully', code: 200 });
+    } catch (error) {
+        res.status(500).send({ message: 'Failed to delete permission', code: 500 });
+    }
+});
+
 
 
 app.get('/verify', async (req, res) => {

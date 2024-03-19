@@ -2,6 +2,38 @@
   <div class="app-container" >
     <el-button type="primary" @click="addRow">Add New Row</el-button>
 
+
+
+    <el-dialog
+      title="Add New Permission"
+      :visible.sync="dialogVisible"
+      width="30%"
+      :before-close="handleClose">
+      <el-form :model="form">
+        <el-form-item label="User ID">
+          <el-input v-model="form.userId"></el-input>
+        </el-form-item>
+        <el-form-item label="Access Teams">
+          <el-select v-model="form.teamIds" multiple placeholder="Select teams">
+            <el-option v-for="team in allTeams" :key="team.slug" :label="team.name" :value="team.slug"></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="Access Level">
+          <el-select v-model="form.accessLevel">
+            <el-option label="read" value="read"></el-option>
+            <el-option label="read/write" value="read/write"></el-option>
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <span slot="footer" class="dialog-footer">
+    <el-button @click="dialogVisible = false">Cancel</el-button>
+    <el-button type="primary" @click="submitForm">Confirm</el-button>
+  </span>
+    </el-dialog>
+
+
+
+
     <el-table
       v-loading="listLoading"
       :data="list"
@@ -24,7 +56,7 @@
 
       <el-table-column label="Access Level" width="150" align="center">
         <template v-slot:default="scope">
-          <el-select v-model="scope.row.accessLevel" @change="() => updateAccessLevel(scope.row)" :class="{'background-green': scope.row.accessLevel === 'read', 'background-red': scope.row.accessLevel === 'read/write'}">
+          <el-select v-model="scope.row.accessLevel" @change="() => updateTeams(scope.row)" :class="{'background-green': scope.row.accessLevel === 'read', 'background-red': scope.row.accessLevel === 'read/write'}">
             <el-option label="read" value="read"></el-option>
             <el-option label="read/write" value="read/write"></el-option>
           </el-select>
@@ -34,11 +66,12 @@
       <el-table-column label="Access Teams" width="500" align="center">
         <template v-slot:default="scope">
           <el-select v-model="scope.row.teamIds" multiple placeholder="Select teams" @blur="() => updateTeams(scope.row)">
-            <!-- 假设这里有一个团队ID的列表 -->
-            <el-option v-for="teamId in allTeams" :key="teamId" :label="teamId" :value="teamId"></el-option>
+            <!-- 使用 team.name 作为显示的标签，使用 team.slug 作为选项的值 -->
+            <el-option v-for="team in allTeams" :key="team.slug" :label="team.name" :value="team.slug"></el-option>
           </el-select>
         </template>
       </el-table-column>
+
 
       <el-table-column label="Operations" width="150" align="center">
         <template v-slot:default="scope">
@@ -52,7 +85,8 @@
 
 
 <script>
-import { getList } from '@/api/table'
+import { delPermissions, getList, updatePermissions } from '@/api/table'
+import axios from 'axios'
 
 export default {
   filters: {
@@ -67,67 +101,94 @@ export default {
   },
   data() {
     return {
+      dialogVisible: false, // 控制对话框的显示
+      form: { // 表单数据
+        userId: '',
+        teamIds: [],
+        accessLevel: ''
+      },
       list: [],
       listLoading: false,
-      allTeams: ['team1', 'team2', 'team3']
+      allTeams: []
     }
   },
   created() {
     this.fetchData()
+    this.fetchTeams()
   },
   methods: {
+    fetchTeams() {
+      axios.get('https://api.victorops.com/api-public/v1/team', {
+        headers: {
+          'Accept': 'application/json',
+          'X-VO-Api-Id': 'b65648ce',
+          'X-VO-Api-Key': '38f5b31d3bd94f29a4e89adccdd07039'
+        }
+      }).then(response => {
+        this.allTeams = response.data.map(team => ({
+          name: team.name,
+          slug: team.slug
+        }));
+      }).catch(error => {
+        console.error('Failed to fetch teams:', error);
+      })
+    },
     fetchData() {
       this.listLoading = true
-
       getList(localStorage.getItem('token')).then(response => {
         this.list = response
         this.listLoading = false
       })
     },
-    updateAccessLevel(row) {
-      updateAccess(row._id, row.accessLevel).then(() => {
-        this.$message.success('Access level updated');
+    handleClose() {
+      this.dialogVisible = false
+    },
+    submitForm() {
+      // 调用updatePermissions函数来添加权限
+      updatePermissions(localStorage.getItem('token'), this.form.userId, this.form.teamIds, this.form.accessLevel).then(() => {
+        this.$message.success('Permission added');
+        this.dialogVisible = false; // 关闭对话框
+        // 可以在这里添加逻辑来刷新列表或者做其他更新
       }).catch(error => {
-        console.error("Error updating access level:", error);
-        this.$message.error('Failed to update access level');
+        console.error('Error adding permission:', error);
+        this.$message.error('Failed to add permission');
       });
     },
+    // updateAccessLevel(row) {
+    //   updateAccess(row._id, row.accessLevel).then(() => {
+    //     this.$message.success('Access level updated');
+    //   }).catch(error => {
+    //     console.error("Error updating access level:", error);
+    //     this.$message.error('Failed to update access level');
+    //   });
+    // },
 
     updateTeams(row) {
-      updateTeamsAPI(row._id, row.teamIds.split(', ')).then(() => {
+      updatePermissions(localStorage.getItem('token'), row.userId, row.teamIds,row.accessLevel).then(() => {
         this.$message.success('Teams updated');
       }).catch(error => {
-        console.error("Error updating teams:", error);
+        console.error('Error updating teams:', error);
         this.$message.error('Failed to update teams');
       });
     },
 
     deleteRow(index, row) {
-      deleteItem(row._id).then(() => {
-        this.$message.success('Row deleted');
-        this.list.splice(index, 1); // Remove the row from the table
+      delPermissions(localStorage.getItem('token'), row.userId).then(() => {
+        this.$message.success('User Permission deleted success');
+        this.fetchData()
       }).catch(error => {
-        console.error("Error deleting item:", error);
-        this.$message.error('Failed to delete row');
+        console.error('Error updating teams:', error);
+        this.$message.error('Failed to update teams');
       });
     },
     addRow() {
-      // 添加一个新行的示例数据结构，根据实际需要调整
-      const newRow = {
-        _id: `new_${Date.now()}`, // 生成一个临时的ID
-        userId: '',
-        accessLevel: 'read',
-        teamIds: [],
-      };
-      this.list.push(newRow);
+      this.dialogVisible = true; // 显示对话框
     },
   }
 }
 </script>
 
 <style>
-
-
 
 
 .background-green {

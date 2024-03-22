@@ -37,10 +37,10 @@ app.get('/admin_api/info', verifyToken, async (req, res) => {
 });
 
 
-app.post('/admin_api/change-password', async (req, res) => {
-    const { userId, newPassword } = req.body;
+app.post('/admin_api/change_password', verifyToken, async (req, res) => {
+    const { username, newPassword } = req.body;
     const newPasswordHash = await bcrypt.hash(newPassword, 10);
-    await User.findByIdAndUpdate(userId, { passwordHash: newPasswordHash });
+    await User.findOneAndUpdate({username}, { passwordHash: newPasswordHash },{upsert:true});
     res.send({ message: 'Password updated successfully',code:200 });
 });
 

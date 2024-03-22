@@ -8,6 +8,14 @@ export function getList(token) {
   })
 }
 
+export function changePassword(token,username, newPassword) {
+  return request({
+    url: '/admin_api/change_password',
+    method: 'post',
+    headers: { 'Authorization': token },
+    data: { username, newPassword}
+  })
+}
 
 export function updatePermissions(token,userId, teamIds, accessLevel) {
   // Ensure the required parameters are provided

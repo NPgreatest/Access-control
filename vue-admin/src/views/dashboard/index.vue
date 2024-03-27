@@ -24,7 +24,7 @@ export default {
   data() {
     return {
       newPassword: '',
-      username:','
+      username:'',
     }
   },
   computed: {

@@ -33,9 +33,11 @@ router.beforeEach(async(to, from, next) => {
           await store.dispatch('user/getInfo')
           next()
         } catch (error) {
-          Message.error(error || 'Has Error')
-          next(`/login?redirect=${to.path}`)
+          // Message.error(error || 'Has Error')
+          Message.error('Session expired, please log in again.') // 更明确的错误信息
+          localStorage.removeItem('token')
           NProgress.done()
+          next(`/login?redirect=${to.path}`)
         }
       }
     }

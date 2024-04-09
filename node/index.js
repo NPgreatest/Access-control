@@ -71,14 +71,14 @@ app.post('/admin_api/permissions/delete', verifyToken, async (req, res) => {
 
 
 app.get('/verify', async (req, res) => {
-    const { userId, teamId, operation } = req.query;
+    let { userId, teamId, operation } = req.query;
     try {
 
         const permission = await Permission.findOne({ userId: userId });
         if (!permission) {
             return res.status(403).json({ message: "No permissions found for user" });
         }
-
+        teamId = "team-" + teamId
         const hasAccess = permission.teamIds.includes(teamId) && (permission.accessLevel === operation || permission.accessLevel === "write");
         if (hasAccess) {
             res.status(200).json({ message: "Access granted" });

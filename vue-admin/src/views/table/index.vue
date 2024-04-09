@@ -3,7 +3,6 @@
     <el-button type="primary" @click="addRow">Add New Row</el-button>
 
 
-
     <el-dialog
       title="Add New Permission"
       :visible.sync="dialogVisible"
@@ -28,7 +27,7 @@
       <span slot="footer" class="dialog-footer">
     <el-button @click="dialogVisible = false">Cancel</el-button>
     <el-button type="primary" @click="submitForm">Confirm</el-button>
-  </span>
+      </span>
     </el-dialog>
 
 
@@ -65,19 +64,25 @@
 
       <el-table-column label="Access Teams" width="500" align="center">
         <template v-slot:default="scope">
-          <el-select v-model="scope.row.teamIds" multiple placeholder="Select teams" @blur="() => updateTeams(scope.row)">
-            <!-- 使用 team.name 作为显示的标签，使用 team.slug 作为选项的值 -->
+          <el-select v-model="scope.row.teamIds" multiple filterable placeholder="Select teams" @blur="() => updateTeams(scope.row)">
             <el-option v-for="team in allTeams" :key="team.slug" :label="team.name" :value="team.slug"></el-option>
           </el-select>
         </template>
       </el-table-column>
 
 
-      <el-table-column label="Operations" width="150" align="center">
+
+      <el-table-column label="Operations" width="300" align="center">
         <template v-slot:default="scope">
-          <el-button type="danger" icon="el-icon-delete" @click="deleteRow(scope.$index, scope.row)">Delete</el-button>
+          <div style="display: flex; justify-content: center; gap: 10px;">
+            <el-button type="danger" icon="el-icon-delete" @click="deleteRow(scope.$index, scope.row)">Delete</el-button>
+            <el-button type="success" icon="el-icon-check" @click="saveRow(scope.$index, scope.row)">Save</el-button>
+          </div>
         </template>
       </el-table-column>
+
+
+
     </el-table>
   </div>
 </template>
@@ -118,11 +123,12 @@ export default {
   },
   methods: {
     fetchTeams() {
+      console.log(process.env.VUE_APP_SPLUNK_ON_CALL_API_ID);
       axios.get('https://api.victorops.com/api-public/v1/team', {
         headers: {
           'Accept': 'application/json',
-          'X-VO-Api-Id': 'b65648ce',
-          'X-VO-Api-Key': '38f5b31d3bd94f29a4e89adccdd07039'
+          'X-VO-Api-Id': process.env.VUE_APP_SPLUNK_ON_CALL_API_ID,
+          'X-VO-Api-Key': process.env.VUE_APP_SPLUNK_ON_CALL_API_KEY
         }
       }).then(response => {
         this.allTeams = response.data.map(team => ({
@@ -148,7 +154,6 @@ export default {
       updatePermissions(localStorage.getItem('token'), this.form.userId, this.form.teamIds, this.form.accessLevel).then(() => {
         this.$message.success('Permission added');
         this.dialogVisible = false; // 关闭对话框
-        // 可以在这里添加逻辑来刷新列表或者做其他更新
       }).catch(error => {
         console.error('Error adding permission:', error);
         this.$message.error('Failed to add permission');
@@ -181,9 +186,18 @@ export default {
         this.$message.error('Failed to update teams');
       });
     },
-    addRow() {
-      this.dialogVisible = true; // 显示对话框
+    saveRow(index, row) {
+      updatePermissions(localStorage.getItem('token'), row.userId, row.teamIds,row.accessLevel).then(() => {
+        this.$message.success('Teams updated');
+      }).catch(error => {
+        console.error('Error updating teams:', error);
+        this.$message.error('Failed to update teams');
+      });
     },
+    addRow(){
+      this.dialogVisible=true;
+    },
+
   }
 }
 </script>
